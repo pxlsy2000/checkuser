@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 import requests
 
@@ -20,34 +21,6 @@ def get_ip_info(ip):
         return result
 
 
-def test():
-    result_fname = 'F:\Project\python\ss_user_check\work\source.txt'
-    new_fname = 'F:\Project\python\ss_user_check\work\dest.txt'
-
-    ans_list = []
-
-    f = open(result_fname)
-    lines = f.readlines()
-    f.close()
-    for line in lines:
-        ans = {}
-        ip = line.strip()
-        ans = get_ip_info(ip)
-        ans['ip'] = ip
-        ans_list.append(ans)
-
-    newlines = []
-    for a in ans_list:
-        tmp = "%s: %s,%s,%s,%s,%s\n" % (a['ip'], a['country'], a['area'], a['region'], a['city'], a['isp'])
-        newlines.append(tmp.encode('UTF-8'))
-
-
-    for i in newlines:
-        print(i)
-    f = open(new_fname, 'w')
-    f.writelines(newlines)
-    f.close()
-
 
 def main():
     # get result
@@ -58,34 +31,135 @@ def main():
     f = open(result_fname)
     lines = f.readlines()
     f.close()
+
     for line in lines:
-        ip_list.append(line.strip())
+        #pdb.set_trace()
+        unit={}
+        #line=line.decode('UTF-8')
+        line = line.split('#')
+        unit['ip']=line[0].strip()
+        unit['location']=line[1].strip()
+        unit['last']=line[2].strip()
+        unit['text']=line[3].strip()
+
+        ip_list.append(unit)
+
 
     f = os.popen("netstat -anp | grep 'ESTABLISHED' | grep '443' ")
     lines = f.readlines()
     f.close()
     for line in lines:
-        line = line.split()
-        port = line[3].split(':')[1]
-        ip = line[4].split(':')[0]
+        sline = line.split()
+        port = sline[3].split(':')[1]
+        ip = sline[4].split(':')[0]
 
         if port == '443':
-            if ip not in p7508_list:
-                p7508_list.append(ip)
-            else:
-                pass
+            exist_flag=False
+            for idx, item in enumerate(ip_list):
+                #pdb.set_trace()
+                if ip == item['ip']:
+                    #update time
+                    ctime=time.strftime('%y-%m-%d-%H:%M',time.localtime(time.time()))
+                    ip_list[idx]['last']=ctime
+                    ip_list[idx]['text']=line.strip()
+                    exist_flag=True
+                else:
+                    continue
+            #notexist
+            if not exist_flag:
+                info=get_ip_info(ip)
+                item={}
+                item['ip']=ip
+                tmp="%s,%s,%s,%s"%(info['country'],info['region'],info['city'],info['isp'])
+                item['location']=tmp.encode('UTF-8')
+                ctime=time.strftime('%y-%m-%d-%H:%M',time.localtime(time.time()))
+                item['last']=ctime
+                item['text']=line.strip()
+                ip_list.append(item)
 
         else:
             pass
 
-    f = open(p7508_result_fname, 'w')
-    for i in p7508_list:
-        f.write(i + '\n')
+    new_lines=[]
+    for i in ip_list:
+        line="%s # %s # %s # %s \n"%(i['ip'],i['location'],i['last'],i['text'])
+        new_lines.append(line)
+
+    f = open(result_fname, 'w')
+    f.writelines(new_lines)
     f.close()
+
+def now(detail):
+
+# current
+    f = os.popen("netstat -anp | grep 'ESTABLISHED' | grep '443' ")
+    lines = f.readlines()
+    f.close()
+
+    ip_list=[]
+    dict_list=[]
+    for line in lines:
+        sline = line.split()
+        port = sline[3].split(':')[1]
+        ip = sline[4].split(':')[0]
+
+        if port == '443':
+            if ip not in ip_list:
+                ip_list.append(ip)
+                item={}
+                info=get_ip_info(ip)
+                item['ip']=ip
+                tmp="%s,%s,%s,%s"%(info['country'],info['region'],info['city'],info['isp'])
+                item['location']=tmp.encode('UTF-8')
+                item['text']=line.strip()
+                dict_list.append(item)
+
+
+    print('now ss user is:')
+    for i in dict_list:
+        print('\t%s # %s'%(i['ip'],i['location']))
+        if(detail):
+            print('\t  %s'%i['text'])
+
+#total
+    result_fname = '/home/pxlsy2000/sslogs/ss_user_443.log'
+
+    ip_list = []
+
+    f = open(result_fname)
+    lines = f.readlines()
+    f.close()
+
+    for line in lines:
+        #pdb.set_trace()
+        unit={}
+        #line=line.decode('UTF-8')
+        line = line.split('#')
+        unit['ip']=line[0].strip()
+        unit['location']=line[1].strip()
+        unit['last']=line[2].strip()
+        unit['text']=line[3].strip()
+
+        ip_list.append(unit)
+
+    print('all logged user:')
+    for i in ip_list:
+        print('\t%s # %s # %s'%(i['ip'],i['location'],i['last']))
+        if(detail):
+            print('\t   %s'%i['text'])
+
+
 
 
 if __name__ == '__main__':
-    #	while(1):
-    #		main()
-    #		time.sleep(10)
-    test()
+    if sys.argv[1]=='log':
+        #main()
+    	while(1):
+    		main()
+    		time.sleep(10)
+    elif sys.argv[1]=='now':
+        now(False)
+    elif sys.argv[1]=='now_detail':
+        now(True)
+    else:
+        pass
