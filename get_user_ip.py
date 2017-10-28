@@ -1,3 +1,4 @@
+#!/usr/local/bin/python2.7
 import os
 import sys
 import time
@@ -156,7 +157,7 @@ if __name__ == '__main__':
         #main()
     	while(1):
     		main()
-    		time.sleep(10)
+    		time.sleep(120)
     elif sys.argv[1]=='now':
         now(False)
     elif sys.argv[1]=='now_detail':
